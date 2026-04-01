@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aqzhol — Анализ дорожного покрытия</title>
+    <meta name="description"
+        content="Aqzhol — интеллектуальная система мониторинга дорожного покрытия с анализом трещин">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #111827;
+            --bg-card: rgba(17, 24, 39, 0.7);
+            --bg-card-hover: rgba(31, 41, 55, 0.8);
+            --border: rgba(75, 85, 99, 0.3);
+            --border-hover: rgba(99, 102, 241, 0.5);
+            --text-primary: #f9fafb;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --accent: #6366f1;
+            --accent-light: #818cf8;
+            --accent-dark: #4f46e5;
+            --success: #10b981;
+            --success-bg: rgba(16, 185, 129, 0.1);
+            --warning: #f59e0b;
+            --warning-bg: rgba(245, 158, 11, 0.1);
+            --danger: #ef4444;
+            --danger-bg: rgba(239, 68, 68, 0.1);
+            --info: #3b82f6;
+            --info-bg: rgba(59, 130, 246, 0.1);
+            --gradient-1: linear-gradient(135deg, #6366f1, #8b5cf6, #a78bfa);
+            --gradient-2: linear-gradient(135deg, #0ea5e9, #6366f1);
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.5);
+            --shadow-glow: 0 0 30px rgba(99, 102, 241, 0.15);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --radius-xs: 6px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.04) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(14, 165, 233, 0.03) 0%, transparent 50%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(10, 14, 26, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+        }
+
+        .header-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--gradient-1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+        }
+
+        .logo-text {
+            font-size: 1.4rem;
+            font-weight: 800;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-subtitle {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: 400;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        nav {
+            display: flex;
+            gap: 6px;
+        }
+
+        .nav-btn {
+            padding: 8px 18px;
+            border-radius: 10px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .nav-btn:hover,
+        .nav-btn.active {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--accent-light);
+        }
+
+        .nav-btn.active {
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--accent-light);
+            font-weight: 600;
+        }
+
+
+        main {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.5px;
+        }
+
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+        }
+
+
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-hover);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 1.2rem;
+        }
+
+        .card-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+
+        .upload-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(17, 24, 39, 0.5);
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.dragover {
+            border-color: var(--accent);
+            background: rgba(99, 102, 241, 0.05);
+            box-shadow: inset 0 0 30px rgba(99, 102, 241, 0.05);
+        }
+
+        .drop-zone.has-image {
+            padding: 0;
+            border-style: solid;
+            border-color: var(--accent);
+        }
+
+        .drop-zone img {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: calc(var(--radius) - 2px);
+            object-fit: contain;
+        }
+
+        .drop-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .drop-text {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .drop-text strong {
+            color: var(--accent-light);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: rgba(17, 24, 39, 0.8);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: var(--radius-sm);
+            border: none;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--gradient-1);
+            color: white;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: rgba(75, 85, 99, 0.3);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(75, 85, 99, 0.5);
+            color: var(--text-primary);
+        }
+
+        .btn-full {
+            width: 100%;
+            justify-content: center;
+        }
+
+
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 14, 26, 0.85);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 56px;
+            height: 56px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-text {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        .loading-step {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+
+        .results-container {
+            display: none;
+        }
+
+        .results-container.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-status {
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .result-status.success {
+            background: var(--success-bg);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .result-status.warning {
+            background: var(--warning-bg);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .result-status.danger {
+            background: var(--danger-bg);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .result-status.no-crack {
+            background: var(--info-bg);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .status-icon {
+            font-size: 2rem;
+        }
+
+        .status-text h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .status-text p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .images-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .image-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .image-card img {
+            width: 100%;
+            height: 320px;
+            object-fit: contain;
+            background: #000;
+        }
+
+        .image-card .image-label {
+            padding: 12px 16px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-top: 1px solid var(--border);
+        }
+
+
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 1.2rem;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .metric-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .severity-bar {
+            height: 6px;
+            background: rgba(75, 85, 99, 0.3);
+            border-radius: 3px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .severity-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 1s ease;
+        }
+
+        .description-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .description-box h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.8rem;
+            color: var(--accent-light);
+        }
+
+        .description-box p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.7;
+        }
+
+
+        .side-predictions {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .side-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+        }
+
+        .side-card img {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: contain;
+            background: #000;
+        }
+
+        .side-card .side-label {
+            padding: 6px 10px;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-align: center;
+            border-top: 1px solid var(--border);
+        }
+
+
+        .history-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .history-table-wrapper {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .history-table th {
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            background: rgba(17, 24, 39, 0.5);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .history-table td {
+            padding: 14px 16px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            border-bottom: 1px solid rgba(75, 85, 99, 0.15);
+        }
+
+        .history-table tr:hover td {
+            background: rgba(99, 102, 241, 0.03);
+        }
+
+        .history-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .badge-danger {
+            background: var(--danger-bg);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .badge-warning {
+            background: var(--warning-bg);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .badge-info {
+            background: var(--info-bg);
+            color: var(--info);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        .empty-state h3 {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+
+        .detail-row {
+            display: none;
+        }
+
+        .detail-row.active {
+            display: table-row;
+        }
+
+        .detail-content {
+            padding: 1.5rem;
+            background: rgba(10, 14, 26, 0.5);
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+
+        .detail-item label {
+            display: block;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .detail-item span {
+            font-size: 0.85rem;
+            color: var(--text-primary);
+        }
+
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 1.2rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+
+
+        @media (max-width: 768px) {
+            main {
+                padding: 1rem;
+            }
+
+            .upload-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .images-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .analysis-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .side-predictions {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .stats-row {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .header-inner {
+                padding: 0 1rem;
+            }
+
+            nav {
+                gap: 2px;
+            }
+
+            .nav-btn {
+                padding: 8px 12px;
+                font-size: 0.8rem;
+            }
+        }
+
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .slide-up {
+            animation: slideUp 0.4s ease forwards;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .view-btn {
+            padding: 5px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--accent-light);
+            font-family: inherit;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .view-btn:hover {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: var(--accent);
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="header-inner">
+            <div class="logo">
+                <div class="logo-icon"></div>
+                <div>
+                    <div class="logo-text">AQZHOL</div>
+                    <div class="logo-subtitle">Road Monitor</div>
+                </div>
+            </div>
+            <nav>
+                <button class="nav-btn active" onclick="showSection('upload')"> Анализ</button>
+                <button class="nav-btn" onclick="showSection('history')"> История</button>
+            </nav>
+        </div>
+    </header>
+
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Анализ дорожного покрытия...</div>
+        <div class="loading-step" id="loadingStep">Запуск модели DeepCrack</div>
+    </div>
+
+    <main>
+
+        <section class="section active" id="uploadSection">
+            <h1 class="page-title">Анализ дорожного покрытия</h1>
+            <p class="page-subtitle">Загрузите фотографию дороги для автоматического обнаружения и анализа трещин</p>
+
+            <div class="upload-grid">
+
+                <div>
+                    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                        <div class="drop-icon"></div>
+                        <div class="drop-text">
+                            Перетащите фото сюда или <strong>нажмите для выбора</strong>
+                        </div>
+                        <div class="drop-text" style="margin-top: 8px; font-size: 0.8rem; opacity: 0.5;">
+                            Поддерживаются: JPEG, PNG, JPG
+                        </div>
+                    </div>
+                    <input type="file" id="fileInput" accept=".jpeg,.jpg,.png" style="display:none"
+                        onchange="handleFileSelect(event)">
+                </div>
+
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: var(--info-bg);"></div>
+                        <div class="card-title">Параметры съёмки</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Ширина (м)</label>
+                            <input class="form-input" type="number" id="inputWidth" value="1" step="0.1" min="0.1"
+                                placeholder="1.0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Высота (м)</label>
+                            <input class="form-input" type="number" id="inputHeight" value="1" step="0.1" min="0.1"
+                                placeholder="1.0">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Единицы измерения</label>
+                        <select class="form-select" id="inputUnit">
+                            <option value="m">Метры (m)</option>
+                            <option value="cm">Сантиметры (cm)</option>
+                            <option value="mm">Миллиметры (mm)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Локация</label>
+                        <input class="form-input" type="text" id="inputLocation" placeholder="Улица, район, город">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Примечания</label>
+                        <input class="form-input" type="text" id="inputNotes"
+                            placeholder="Доп. информация (необязательно)">
+                    </div>
+                    <button class="btn btn-primary btn-full" id="analyzeBtn" onclick="startAnalysis()" disabled>
+                        Начать анализ
+                    </button>
+                </div>
+            </div>
+
+
+            <div class="results-container" id="resultsContainer">
+
+                <div id="statusBanner"></div>
+
+
+                <div class="images-grid" id="imagesGrid"></div>
+
+
+                <div id="analysisMetrics"></div>
+
+
+                <div id="analysisDescription"></div>
+
+
+                <div id="sidePredictions"></div>
+            </div>
+        </section>
+
+
+        <section class="section" id="historySection">
+            <div class="history-header">
+                <div>
+                    <h1 class="page-title">История анализов</h1>
+                    <p class="page-subtitle">Все результаты анализа дорожного покрытия для диспетчера</p>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-secondary" onclick="refreshHistory()"> Обновить</button>
+                    <button class="btn btn-primary" onclick="exportHistory()"> Выгрузить отчёт</button>
+                </div>
+            </div>
+
+
+            <div class="stats-row" id="statsRow">
+                <div class="stat-card">
+                    <div class="stat-value" id="statTotal">0</div>
+                    <div class="stat-label">Всего анализов</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statCracks">0</div>
+                    <div class="stat-label">С трещинами</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statClean">0</div>
+                    <div class="stat-label">Без трещин</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statCritical">0</div>
+                    <div class="stat-label">Критических</div>
+                </div>
+            </div>
+
+
+            <div class="history-table-wrapper">
+                <table class="history-table" id="historyTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Дата / Время</th>
+                            <th>Файл</th>
+                            <th>Локация</th>
+                            <th>Статус</th>
+                            <th>Тип</th>
+                            <th>Степень</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                    </tbody>
+                </table>
+                <div class="empty-state" id="emptyHistory">
+                    <div class="empty-icon"></div>
+                    <h3>История пуста</h3>
+                    <p>Загрузите фото дороги для первого анализа</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:8000';
+        let selectedFile = null;
+        let currentHistoryData = [];
+
+        function showSection(name) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+            if (name === 'upload') {
+                document.getElementById('uploadSection').classList.add('active');
+                document.querySelectorAll('.nav-btn')[0].classList.add('active');
+            } else if (name === 'history') {
+                document.getElementById('historySection').classList.add('active');
+                document.querySelectorAll('.nav-btn')[1].classList.add('active');
+                refreshHistory();
+            }
+        }
+
+        const dropZone = document.getElementById('dropZone');
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        function handleFileSelect(event) {
+            if (event.target.files.length > 0) {
+                handleFile(event.target.files[0]);
+            }
+        }
+
+        function handleFile(file) {
+            if (!file.type.match('image.*')) {
+                alert('Пожалуйста, выберите изображение (JPEG, PNG)');
+                return;
+            }
+            selectedFile = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                dropZone.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+                dropZone.classList.add('has-image');
+            };
+            reader.readAsDataURL(file);
+            document.getElementById('analyzeBtn').disabled = false;
+        }
+
+        const loadingSteps = [
+            'Загрузка изображения...',
+            'Запуск модели DeepCrack...',
+            'Детекция трещин...',
+            'Обработка данных...',
+            'Формирование отчёта...'
+        ];
+
+        async function startAnalysis() {
+            if (!selectedFile) return;
+
+            const overlay = document.getElementById('loadingOverlay');
+            const stepEl = document.getElementById('loadingStep');
+            overlay.classList.add('active');
+
+            let stepIndex = 0;
+            const stepInterval = setInterval(() => {
+                stepIndex = (stepIndex + 1) % loadingSteps.length;
+                stepEl.textContent = loadingSteps[stepIndex];
+            }, 2500);
+
+            try {
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                formData.append('width', document.getElementById('inputWidth').value || 1);
+                formData.append('height', document.getElementById('inputHeight').value || 1);
+                formData.append('unit', document.getElementById('inputUnit').value || 'm');
+                formData.append('location', document.getElementById('inputLocation').value || 'Не указано');
+                formData.append('notes', document.getElementById('inputNotes').value || '');
+
+                const response = await fetch(`${API_URL}/analyze`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Ошибка сервера: ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayResults(data);
+
+            } catch (error) {
+                console.error('Analysis error:', error);
+                alert('Ошибка анализа: ' + error.message);
+            } finally {
+                clearInterval(stepInterval);
+                overlay.classList.remove('active');
+            }
+        }
+
+        function displayResults(data) {
+            const container = document.getElementById('resultsContainer');
+            container.classList.add('active');
+
+            const analysis = data.analysis;
+            const cracksDetected = data.cracks_detected;
+
+            let statusClass, statusIcon, statusTitle, statusDesc;
+            if (!cracksDetected) {
+                statusClass = 'no-crack';
+                statusIcon = '';
+                statusTitle = 'Трещины не обнаружены';
+                statusDesc = 'Дорожное покрытие в удовлетворительном состоянии. Ремонт не требуется.';
+            } else {
+                const level = analysis.severity_level || 5;
+                if (level <= 3) {
+                    statusClass = 'success';
+                    statusIcon = '';
+                    statusTitle = 'Обнаружены незначительные трещины';
+                    statusDesc = analysis.description;
+                } else if (level <= 6) {
+                    statusClass = 'warning';
+                    statusIcon = '';
+                    statusTitle = 'Обнаружены трещины средней степени';
+                    statusDesc = analysis.description;
+                } else {
+                    statusClass = 'danger';
+                    statusIcon = '';
+                    statusTitle = 'Обнаружены серьёзные повреждения';
+                    statusDesc = analysis.description;
+                }
+            }
+
+            document.getElementById('statusBanner').innerHTML = `
+                <div class="result-status ${statusClass} fade-in">
+                    <div class="status-icon">${statusIcon}</div>
+                    <div class="status-text">
+                        <h3>${statusTitle}</h3>
+                        <p>${statusDesc}</p>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('imagesGrid').innerHTML = `
+                <div class="image-card slide-up">
+                    <img src="${data.images.original}" alt="Оригинальное фото">
+                    <div class="image-label"> Оригинальное изображение</div>
+                </div>
+                <div class="image-card slide-up" style="animation-delay: 0.1s">
+                    <img src="${data.images.result}" alt="Результат анализа">
+                    <div class="image-label"> Результат детекции трещин</div>
+                </div>
+            `;
+
+            if (cracksDetected) {
+                const level = analysis.severity_level || 0;
+                const severityColor = level <= 3 ? 'var(--success)' : level <= 6 ? 'var(--warning)' : 'var(--danger)';
+
+                document.getElementById('analysisMetrics').innerHTML = `
+                    <div class="analysis-grid fade-in" style="animation-delay: 0.2s">
+                        <div class="metric-card">
+                            <div class="metric-label">Тип трещины</div>
+                            <div class="metric-value">${analysis.crack_type || '—'}</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Степень повреждения</div>
+                            <div class="metric-value">${analysis.severity || '—'}</div>
+                            <div class="severity-bar">
+                                <div class="severity-fill" style="width: ${level * 10}%; background: ${severityColor}"></div>
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Покрытие трещин</div>
+                            <div class="metric-value">${data.crack_coverage_percent}%</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Срок ремонта</div>
+                            <div class="metric-value">${analysis.repair_timeline || '—'}</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Ориент. стоимость</div>
+                            <div class="metric-value">${analysis.estimated_cost || '—'}</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Оценка риска</div>
+                            <div class="metric-value" style="font-size: 0.9rem">${analysis.risk_assessment || '—'}</div>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('analysisDescription').innerHTML = `
+                    <div class="description-box fade-in" style="animation-delay: 0.3s">
+                        <h4> Рекомендация по ремонту</h4>
+                        <p>${analysis.repair_recommendation || 'Нет рекомендаций'}</p>
+                    </div>
+                `;
+            } else {
+                document.getElementById('analysisMetrics').innerHTML = '';
+                document.getElementById('analysisDescription').innerHTML = `
+                    <div class="description-box fade-in" style="animation-delay: 0.3s">
+                        <h4> Заключение</h4>
+                        <p>${analysis.description || 'Дорожное покрытие в удовлетворительном состоянии.'}</p>
+                    </div>
+                `;
+            }
+
+            const sides = ['side1', 'side2', 'side3', 'side4', 'side5'];
+            let sidesHtml = '<h3 class="card-title" style="margin-bottom: 1rem; color: var(--text-secondary)">Промежуточные карты предсказаний</h3><div class="side-predictions">';
+            sides.forEach((k, i) => {
+                if (data.images[k]) {
+                    sidesHtml += `
+                        <div class="side-card slide-up" style="animation-delay: ${0.4 + i * 0.05}s">
+                            <img src="${data.images[k]}" alt="${k}">
+                            <div class="side-label">Side ${i + 1}</div>
+                        </div>
+                    `;
+                }
+            });
+            sidesHtml += '</div>';
+
+            if (data.images.fused) {
+                sidesHtml += `
+                    <div style="margin-top: 1rem;">
+                        <h3 class="card-title" style="margin-bottom: 1rem; color: var(--text-secondary)">Объединённая карта (Fused)</h3>
+                        <div class="image-card" style="max-width: 300px;">
+                            <img src="${data.images.fused}" alt="Fused" style="height: 256px;">
+                            <div class="image-label">Fused Prediction</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('sidePredictions').innerHTML = sidesHtml;
+
+            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function refreshHistory() {
+            try {
+                const response = await fetch(`${API_URL}/history`);
+                if (!response.ok) throw new Error('Failed to fetch history');
+                currentHistoryData = await response.json();
+                renderHistory(currentHistoryData);
+            } catch (error) {
+                console.error('History fetch error:', error);
+                renderHistory([]);
+            }
+        }
+
+        function renderHistory(data) {
+            const tbody = document.getElementById('historyBody');
+            const emptyState = document.getElementById('emptyHistory');
+
+            const total = data.length;
+            const withCracks = data.filter(d => d.cracks_detected).length;
+            const clean = total - withCracks;
+            const critical = data.filter(d => d.analysis && d.analysis.severity_level >= 7).length;
+
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statCracks').textContent = withCracks;
+            document.getElementById('statClean').textContent = clean;
+            document.getElementById('statCritical').textContent = critical;
+
+            if (data.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            tbody.innerHTML = '';
+
+            data.forEach((item, index) => {
+                const a = item.analysis || {};
+                const date = new Date(item.timestamp);
+                const dateStr = date.toLocaleDateString('ru-RU', {
+                    day: '2-digit', month: '2-digit', year: 'numeric'
+                });
+                const timeStr = date.toLocaleTimeString('ru-RU', {
+                    hour: '2-digit', minute: '2-digit'
+                });
+
+                let statusBadge;
+                if (!item.cracks_detected) {
+                    statusBadge = '<span class="badge badge-info"> Нет трещин</span>';
+                } else {
+                    const level = a.severity_level || 5;
+                    if (level <= 3) {
+                        statusBadge = '<span class="badge badge-success"> Лёгкая</span>';
+                    } else if (level <= 6) {
+                        statusBadge = '<span class="badge badge-warning"> Средняя</span>';
+                    } else {
+                        statusBadge = '<span class="badge badge-danger"> Тяжёлая</span>';
+                    }
+                }
+
+                const mainRow = document.createElement('tr');
+                mainRow.style.cursor = 'pointer';
+                mainRow.onclick = () => toggleDetail(index);
+                mainRow.innerHTML = `
+                    <td style="font-weight: 600; color: var(--accent-light);">#${item.id}</td>
+                    <td>${dateStr}<br><span style="font-size:0.75rem;color:var(--text-muted)">${timeStr}</span></td>
+                    <td>${item.filename || '—'}</td>
+                    <td>${item.location || '—'}</td>
+                    <td>${statusBadge}</td>
+                    <td>${a.crack_type || '—'}</td>
+                    <td>${a.severity || '—'} ${a.severity_level ? `(${a.severity_level}/10)` : ''}</td>
+                    <td><button class="view-btn" onclick="event.stopPropagation();toggleDetail(${index})"></button></td>
+                `;
+                tbody.appendChild(mainRow);
+
+                const detailRow = document.createElement('tr');
+                detailRow.className = 'detail-row';
+                detailRow.id = `detail-${index}`;
+                detailRow.innerHTML = `
+                    <td colspan="8">
+                        <div class="detail-content">
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <label>Описание</label>
+                                    <span>${a.description || '—'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Рекомендация</label>
+                                    <span>${a.repair_recommendation || '—'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Срок ремонта</label>
+                                    <span>${a.repair_timeline || '—'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Стоимость</label>
+                                    <span>${a.estimated_cost || '—'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Оценка риска</label>
+                                    <span>${a.risk_assessment || '—'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Покрытие трещин</label>
+                                    <span>${item.crack_coverage_percent || 0}%</span>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Размеры</label>
+                                    <span>${item.dimensions || '—'}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Примечания</label>
+                                    <span>${item.notes || '—'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(detailRow);
+            });
+        }
+
+        function toggleDetail(index) {
+            const detail = document.getElementById(`detail-${index}`);
+            detail.classList.toggle('active');
+        }
+
+        async function exportHistory() {
+            try {
+                const response = await fetch(`${API_URL}/history/export/text`);
+                if (!response.ok) throw new Error('Export failed');
+                const text = await response.text();
+
+                const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `aqzhol_report_${new Date().toISOString().slice(0, 10)}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('Ошибка выгрузки: ' + error.message);
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -48,7 +48,7 @@ function App() {
     console.log(width, height)
   const requestOptions = {
       method: 'POST',
-      //headers: { 'Content-Type': 'multipart/form-data' }, // DO NOT INCLUDE HEADERS
+      
       body: formData,
   };
     fetch('http://127.0.0.1:8000/predict/'+width+'-' + height +'/' + unit, requestOptions)

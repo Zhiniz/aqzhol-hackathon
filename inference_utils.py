@@ -94,18 +94,18 @@ def overlay(
     return image_combined
 
 def inference(model, bytesImg, dim, unit):
-    #print(img_path) 
     
-    image = read_image(bytesImg) #Read Array
-    # batchify
+    
+    image = read_image(bytesImg) 
+    
     image = image.unsqueeze(0)
-    # hacky way to pass ground truth label
+    
     model.set_input({'image': image, 'label': torch.zeros_like(image), 'A_paths':''}) 
-    model.test()           # run inference
-    visuals = model.get_current_visuals()  # get image results
+    model.test()           
+    visuals = model.get_current_visuals()  
     confidence = visuals['fused'].max()
 
-    # fused for final prediction
+    
     for key in visuals.keys():
         visuals[key] = tensor2im(visuals[key])
         

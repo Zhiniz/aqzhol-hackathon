@@ -49,6 +49,9 @@ def getContours(npImage, overlay_img, realHeight, realWidth, unit, confidence, a
     cnts = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL,
                             cv2.CHAIN_APPROX_SIMPLE)
     cnts = imutils.grab_contours(cnts)
+    if len(cnts) == 0:
+        # No cracks: sort_contours() would raise ValueError on an empty list.
+        return overlay_img
     (cnts, _) = contours.sort_contours(cnts)
     pixelsPerMetricHeight = realHeight/imgHeight
     pixelsPerMetricWidth = realWidth/imgWidth

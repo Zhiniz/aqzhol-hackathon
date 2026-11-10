@@ -17,6 +17,8 @@ function App() {
   const [width, setImgWidth] = useState(1);
   const [height, setImgHeight] = useState(1);
   const [unit, setImgUnit] = useState('m');
+  const [error, setError] = useState(null);
+  const [summary, setSummary] = useState(null);
 
   const changeHandler = (event) => {
       setSelectedFile(event.target.files[0]);
@@ -36,34 +38,63 @@ function App() {
   const setHeight = (event) => {
     setImgHeight(event.target.value)
   }
-  const handleSubmit = event => {
-    event.preventDefault();
-    const formData = new FormData();
-    formData.append(
-      "file",
-      selectedFile,
-      selectedFile.name
-    );
-
-    console.log(width, height)
-  const requestOptions = {
-      method: 'POST',
-      
-      body: formData,
+  const resetResults = () => {
+    setPredUrl(undefined);
+    setFusedUrl(undefined);
+    setSide1Url(undefined);
+    setSide2Url(undefined);
+    setSide3Url(undefined);
+    setSide4Url(undefined);
+    setSide5Url(undefined);
+    setSummary(null);
   };
-    fetch('http://127.0.0.1:8000/predict/'+width+'-' + height +'/' + unit, requestOptions)
-    .then(response => response.json())//.blob())
-    .then(data => {
-      console.log(data)
-        setPredUrl("data:image/png;base64,"+data[0]);
-        setFusedUrl("data:image/png;base64,"+data[1]);
-        setSide1Url("data:image/png;base64,"+data[2]);
-        setSide2Url("data:image/png;base64,"+data[3]);
-        setSide3Url("data:image/png;base64,"+data[4]);
-        setSide4Url("data:image/png;base64,"+data[5]);
-        setSide5Url("data:image/png;base64,"+data[6]);
-    })
-    .catch((err) => console.log(err));
+  const handleSubmit = async event => {
+    event.preventDefault();
+    setError(null);
+    if (!selectedFile) {
+      setError('Please select an image first.');
+      return;
+    }
+    const formData = new FormData();
+    formData.append('file', selectedFile, selectedFile.name);
+    formData.append('width', width || 1);
+    formData.append('height', height || 1);
+    formData.append('unit', unit || 'm');
+
+    try {
+      const response = await fetch('http://127.0.0.1:8000/analyze', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) {
+        let detail = '';
+        try {
+          const body = await response.json();
+          detail = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail || '');
+        } catch (_) {
+          // non-JSON error body
+        }
+        throw new Error(`Server error ${response.status}${detail ? ': ' + detail : ''}`);
+      }
+      const data = await response.json();
+      // images.* are already complete data URLs
+      const images = data.images || {};
+      setPredUrl(images.result);
+      setFusedUrl(images.fused);
+      setSide1Url(images.side1);
+      setSide2Url(images.side2);
+      setSide3Url(images.side3);
+      setSide4Url(images.side4);
+      setSide5Url(images.side5);
+      setSummary({
+        status: data.analysis && data.analysis.status,
+        coverage: data.crack_coverage_percent,
+      });
+    } catch (err) {
+      console.error(err);
+      resetResults();
+      setError(err.message || 'Analysis failed');
+    }
   }
   return (  <div className="d-flex">
       <div className="card mx-5">
@@ -85,6 +116,12 @@ function App() {
           </Form.Group>
             <Button variant="primary" type="submit">Predict</Button>
           </Form>
+          {error && <div className="alert alert-danger mt-3" role="alert">{error}</div>}
+          {summary && (
+            <div className="alert alert-info mt-3">
+              {summary.status} ({summary.coverage}% coverage)
+            </div>
+          )}
         </div>
       </div>
       <div className="card">

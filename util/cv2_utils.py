@@ -57,10 +57,11 @@ def getContours(npImage, overlay_img, realHeight, realWidth, unit, confidence, a
     pixelsPerMetricWidth = realWidth/imgWidth
     y1, x1, y2, x2 = extract_bboxes(npImage)[0]
     cv2.rectangle(overlay_img,(x1,y1),(x2, y2),(0,255,0),2)
+    orig = overlay_img.copy()
+    cats = []
     for c in cnts:
         if cv2.contourArea(c) < 100:
             continue
-        orig = overlay_img.copy()
         box = cv2.minAreaRect(c)
         box = cv2.boxPoints(box)
         box = np.array(box, dtype="int")
@@ -135,7 +136,9 @@ def getContours(npImage, overlay_img, realHeight, realWidth, unit, confidence, a
             cat += 'L'
         else:
             cat += 'R'
-        cv2.putText(orig, "cat="+cat + " Crack percentage={:.2f}".format(confidence.item()), (x1, max(0, y1-5)), cv2.FONT_HERSHEY_SIMPLEX,  0.45, (36,255,12), 1)
-        return orig
+        cats.append(cat)
+    if cats:
+        cv2.putText(orig, "cat="+",".join(cats) + " Crack percentage={:.2f}".format(confidence.item()), (x1, max(0, y1-5)), cv2.FONT_HERSHEY_SIMPLEX,  0.45, (36,255,12), 1)
+    return orig
 
 

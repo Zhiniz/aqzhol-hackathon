@@ -12,6 +12,24 @@ import math
 def midpoint(ptA, ptB):
     return ((ptA[0] + ptB[0]) * 0.5, (ptA[1] + ptB[1]) * 0.5)
 
+def horizontal_run(mask, x, y):
+    """Return (row, left, right) of the horizontal run of nonzero pixels in
+    `mask` that contains the nonzero pixel closest to (x, y), or None if the
+    mask is empty."""
+    ys, xs = np.nonzero(mask)
+    if len(xs) == 0:
+        return None
+    i = np.argmin((xs - x) ** 2 + (ys - y) ** 2)
+    row, col = ys[i], xs[i]
+    line = mask[row]
+    left = col
+    while left > 0 and line[left - 1]:
+        left -= 1
+    right = col
+    while right < len(line) - 1 and line[right + 1]:
+        right += 1
+    return row, left, right
+
 def extract_bboxes(fused):
     """Compute bounding boxes from masks.
     mask: [height, width]..
@@ -104,14 +122,16 @@ def getContours(npImage, overlay_img, realHeight, realWidth, unit, confidence, a
         M = cv2.moments(c)
         cX = int(M["m10"] / M["m00"])
         cY = int(M["m01"] / M["m00"])
-        mask = gray.copy()
-        mask[mask < 40] = 0
-        width = cv2.countNonZero(mask[cY][:])
-        nonzero_x = np.nonzero(mask[cY][:])[0]
-        if len(nonzero_x) > 0:
-            right_most_x = np.max(nonzero_x)
-            left_most_x = np.min(nonzero_x)
-            cv2.line(orig, (int(left_most_x), int(cY)), (int(right_most_x), int(cY)),
+        # Measure width only on this contour's own pixels, not the whole row.
+        contour_mask = np.zeros_like(gray)
+        cv2.drawContours(contour_mask, [c], -1, 255, thickness=cv2.FILLED)
+        contour_mask[gray < 40] = 0
+        width = 0
+        run = horizontal_run(contour_mask, cX, cY)
+        if run is not None:
+            row, left_most_x, right_most_x = run
+            width = right_most_x - left_most_x + 1
+            cv2.line(orig, (int(left_most_x), int(row)), (int(right_most_x), int(row)),
                      (255, 0, 0), 1)
         width *= pixelsPerMetricWidth 
         dimA = dA * pixelsPerMetricHeight

@@ -5,6 +5,7 @@ import uuid
 import base64
 import threading
 import traceback
+from collections import deque
 from datetime import datetime
 from typing import Union, List, Optional
 
@@ -82,7 +83,9 @@ def run_inference(bytesImg: bytes, dim: tuple, unit: str):
 
 
 
-analysis_history: list = []
+# Records include base64 images, so keep only the most recent analyses in memory.
+MAX_HISTORY = int(os.getenv("MAX_HISTORY", "50"))
+analysis_history: deque = deque(maxlen=MAX_HISTORY)
 
 
 

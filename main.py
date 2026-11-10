@@ -3,6 +3,7 @@ import io
 import json
 import uuid
 import base64
+import threading
 import traceback
 from datetime import datetime
 from typing import Union, List, Optional
@@ -16,6 +17,7 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
 
 from util.inference_utils import inference, create_model
 from dotenv import load_dotenv
@@ -68,6 +70,15 @@ print(" Loading DeepCrack model...")
 parameters = Parameters()
 model = create_model(parameters)
 print(" DeepCrack model loaded!")
+
+# DeepCrackModel keeps per-call state (set_input -> test -> get_current_visuals),
+# so inference calls running in the threadpool must not overlap.
+model_lock = threading.Lock()
+
+
+def run_inference(bytesImg: bytes, dim: tuple, unit: str):
+    with model_lock:
+        return inference(model, bytesImg, dim, unit)
 
 
 
@@ -248,7 +259,8 @@ async def analyze_road(
 
     try:
         bytesImg = await file.read()
-        contour_img, visuals = inference(model, bytesImg, (width, height), unit)
+        # inference is CPU/GPU-bound and synchronous; keep it off the event loop.
+        contour_img, visuals = await run_in_threadpool(run_inference, bytesImg, (width, height), unit)
         cracks_detected, crack_ratio = check_cracks_detected(visuals)
         original_b64 = base64.b64encode(bytesImg).decode('ascii')
         result_b64 = image_to_base64(contour_img)

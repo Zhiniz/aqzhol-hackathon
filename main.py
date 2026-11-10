@@ -7,16 +7,15 @@ import threading
 import traceback
 from collections import deque
 from datetime import datetime
-from typing import Union, List, Optional
+from typing import List
 
 import cv2
-import torch
 import numpy as np
 from PIL import Image
 from pydantic import BaseModel
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse, JSONResponse, Response
+from fastapi.responses import PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 
@@ -115,7 +114,7 @@ def sanitize_for_json(obj):
     return obj
 
 
-def check_cracks_detected(visuals: dict, threshold: float = 0.15) -> tuple:
+def check_cracks_detected(visuals: dict) -> tuple:
     
     fused = visuals['fused']
     if len(fused.shape) == 3:
@@ -306,20 +305,8 @@ async def analyze_road(
 @app.get("/history")
 def get_history():
     
-    history_light = []
-    for r in reversed(analysis_history):
-        history_light.append({
-            "id": r["id"],
-            "timestamp": r["timestamp"],
-            "filename": r["filename"],
-            "location": r["location"],
-            "notes": r["notes"],
-            "dimensions": r["dimensions"],
-            "cracks_detected": r["cracks_detected"],
-            "crack_coverage_percent": r["crack_coverage_percent"],
-            "analysis": r["analysis"]
-        })
-    return history_light
+    # Everything except the (large) base64 images.
+    return [{k: v for k, v in r.items() if k != "images"} for r in reversed(analysis_history)]
 
 
 @app.get("/history/{analysis_id}")
